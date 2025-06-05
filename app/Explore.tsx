@@ -1,11 +1,20 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { Link, useRouter } from "expo-router";
 import { useState } from "react";
-import { Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import {
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { useFavorites } from "../context/FavoritesContext";
 
 const resorts = [
   {
-    name: "Pârtia Rarău",
+    name: "Pârtia Rărau",
     location: "Câmpulung Moldovenesc",
     price: "120 RON / day",
     length: "2.8 km",
@@ -50,6 +59,7 @@ export default function Explore() {
   const [search, setSearch] = useState("");
   const [menuVisible, setMenuVisible] = useState(false);
   const router = useRouter();
+  const { addFavorite } = useFavorites();
 
   const filteredResorts = resorts.filter((resort) =>
     resort.name.toLowerCase().includes(search.toLowerCase())
@@ -65,7 +75,7 @@ export default function Explore() {
       <View style={styles.header}>
         <Text style={styles.title}>Explore Ski Resorts</Text>
         <TouchableOpacity onPress={() => setMenuVisible(true)}>
-          <Text style={styles.menuText}>⋮</Text>
+          <Text style={styles.menuText}>⋯</Text>
         </TouchableOpacity>
       </View>
 
@@ -77,15 +87,32 @@ export default function Explore() {
       />
       <ScrollView contentContainerStyle={styles.list}>
         {filteredResorts.map((resort, index) => (
-          <Link href={`/partii/${resort.routeName}`} asChild key={index}>
-            <TouchableOpacity style={styles.card}>
-              <Text style={styles.resortName}>{resort.name}</Text>
-              <Text style={styles.resortLocation}>{resort.location}</Text>
-              <Text style={styles.detail}>🎫 Skipass: {resort.price}</Text>
-              <Text style={styles.detail}>🎿 Slope Length: {resort.length}</Text>
-              <Text style={styles.detail}>⛰ Difficulty: {resort.difficulty}</Text>
-            </TouchableOpacity>
-          </Link>
+          <View key={index} style={styles.card}>
+            <Link href={`/partii/${resort.routeName}`} asChild>
+              <TouchableOpacity>
+                <Text style={styles.resortName}>{resort.name}</Text>
+                <Text style={styles.resortLocation}>{resort.location}</Text>
+                <Text style={styles.detail}>🎫 Skipass: {resort.price}</Text>
+                <Text style={styles.detail}>🎿 Slope Length: {resort.length}</Text>
+                <Text style={styles.detail}>⛰ Difficulty: {resort.difficulty}</Text>
+              </TouchableOpacity>
+            </Link>
+              <TouchableOpacity
+                style={styles.favoriteButton}
+                onPress={() =>
+                addFavorite({
+                id: resort.routeName,
+                name: resort.name,
+                location: resort.location,
+                price: resort.price,
+                routeName: resort.routeName, // ✅ make sure this is included
+            })
+          }
+          >
+          <Text style={styles.favoriteText}>♡ Add to Favorites</Text>
+        </TouchableOpacity>
+
+          </View>
         ))}
       </ScrollView>
 
@@ -95,9 +122,17 @@ export default function Explore() {
         animationType="fade"
         onRequestClose={() => setMenuVisible(false)}
       >
-        <TouchableOpacity style={styles.modalOverlay} onPress={() => setMenuVisible(false)}>
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          onPress={() => setMenuVisible(false)}
+        >
           <View style={styles.menuTopRight}>
-            <TouchableOpacity onPress={() => { setMenuVisible(false); router.push("/Profile"); }}>
+            <TouchableOpacity
+              onPress={() => {
+                setMenuVisible(false);
+                router.push("/Profile");
+              }}
+            >
               <Text style={styles.menuItem}>Profile</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={handleLogout}>
@@ -166,6 +201,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#333",
     marginTop: 2,
+  },
+  favoriteButton: {
+    marginTop: 10,
+    alignSelf: "flex-start",
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    backgroundColor: "#ffffff",
+    borderRadius: 8,
+    borderColor: "#00796B",
+    borderWidth: 1,
+  },
+  favoriteText: {
+    color: "#00796B",
+    fontWeight: "600",
   },
   modalOverlay: {
     flex: 1,

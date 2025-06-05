@@ -10,6 +10,7 @@ export default function Home() {
   const handleLogout = () => {
     console.log("Logging out...");
     setMenuVisible(false);
+    router.replace("/SignIn");
   };
 
   return (
