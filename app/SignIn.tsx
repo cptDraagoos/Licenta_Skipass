@@ -2,11 +2,33 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import { StyleSheet, Text, TextInput, TouchableOpacity } from "react-native";
+import { supabase } from "../lib/supabaseClient";
 
 export default function SignIn() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const router = useRouter();
+
+  const handleLogin = async () => {
+    if (!email || !password) {
+      alert("Please fill in both fields.");
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("users")
+      .select("*")
+      .eq("email", email)
+      .eq("password", password)
+      .single();
+
+    if (error || !data) {
+      alert("Invalid credentials");
+    } else {
+      console.log("Login successful:", data);
+      router.push("/Home");
+    }
+  };
 
   return (
     <LinearGradient colors={["#80DEEA", "#E0F7FA"]} style={styles.container}>
@@ -30,11 +52,11 @@ export default function SignIn() {
         placeholderTextColor="#999"
       />
 
-      <TouchableOpacity style={styles.button} onPress={() => router.push("/Home")}> 
+      <TouchableOpacity style={styles.button} onPress={handleLogin}> 
         <Text style={styles.buttonText}>Login</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity onPress={() => router.push("/Register")}>
+      <TouchableOpacity onPress={() => router.push("/Register")}> 
         <Text style={styles.footerText}>Don't have an account?</Text>
       </TouchableOpacity>
     </LinearGradient>
