@@ -1,6 +1,7 @@
 import { LinearGradient } from "expo-linear-gradient";
+import { Link } from "expo-router";
 import { useEffect, useState } from "react";
-import { FlatList, StyleSheet, Text, View } from "react-native";
+import { FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { supabase } from "../lib/supabaseClient";
 
 interface Booking {
@@ -53,6 +54,12 @@ export default function Bookings() {
             <Text style={styles.detail}>
               📅 {new Date(item.purchase_date).toLocaleDateString()}
             </Text>
+
+            <Link href="/Scan" asChild>
+              <TouchableOpacity style={styles.scanButton}>
+                <Text style={styles.scanText}>Scan NFC</Text>
+              </TouchableOpacity>
+            </Link>
           </View>
         )}
         ListEmptyComponent={<Text style={styles.empty}>No bookings found.</Text>}
@@ -96,5 +103,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#666",
     marginTop: 40,
+  },
+  scanButton: {
+    marginTop: 10,
+    backgroundColor: "#00796B",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    alignSelf: "flex-start",
+  },
+  scanText: {
+    color: "#FFF",
+    fontWeight: "600",
   },
 });
