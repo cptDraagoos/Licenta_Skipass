@@ -13,29 +13,57 @@ export default function Register() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const router = useRouter();
 
-  const handleRegister = async () => {
-    if (!name || !email || !password || !confirmPassword) {
-      alert("Please fill in all fields.");
-      return;
-    }
+const handleRegister = async () => {
+  if (!name || !email || !password || !confirmPassword) {
+    alert("Please fill in all fields.");
+    return;
+  }
 
-    if (password !== confirmPassword) {
-      alert("Passwords do not match.");
-      return;
-    }
+  if (password !== confirmPassword) {
+    alert("Passwords do not match.");
+    return;
+  }
 
-    const { data, error } = await supabase
-      .from("users")
-      .insert([{ name, email, password }]);
+  // Step 1: Register the user via Supabase Auth
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: { name },
+    },
+  });
 
-    if (error) {
-      console.error("Registration error:", error.message);
-      alert(error.message);
+  if (error) {
+    console.error("Registration error:", error.message);
+    alert(error.message);
+    return;
+  }
+
+  const user = data.user;
+
+  if (user) {
+    // Step 2: Save user in your custom users table
+    const { error: insertError } = await supabase.from("users").insert([
+      {
+        id: user.id, // use auth UID as primary key
+        name,
+        email,
+        created_at: new Date().toISOString(), // optional
+      },
+    ]);
+
+    if (insertError) {
+      console.error("DB insert error:", insertError.message);
+      alert("Account created, but failed to store profile info.");
     } else {
-      console.log("User registered:", data);
+      console.log("User fully registered in both Auth and users table");
       router.push("/Home");
     }
-  };
+  }
+};
+
+
+
 
   return (
     <LinearGradient colors={["#E0F7FA", "#80DEEA"]} style={styles.container}>

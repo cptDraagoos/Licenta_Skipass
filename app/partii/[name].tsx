@@ -1,6 +1,7 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams } from "expo-router";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { supabase } from "../../lib/supabaseClient";
 
 const resortDetails = {
   PartiaRarau: {
@@ -65,6 +66,27 @@ export default function ResortPage() {
   const { name } = useLocalSearchParams();
   const resort = resortDetails[name as keyof typeof resortDetails];
 
+  const handleBuyPass = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      alert("You must be logged in to buy a pass.");
+      return;
+    }
+
+    const { error } = await supabase.from("skipasses").insert({
+      user_id: user.id,
+      resort: resort.name,
+    });
+
+    if (error) {
+      console.error("Error buying pass:", error);
+      alert("Something went wrong. Try again.");
+    } else {
+      alert(`Pass for ${resort.name} successfully purchased!`);
+    }
+  };
+
   if (!resort) {
     return (
       <View style={styles.center}>
@@ -84,7 +106,7 @@ export default function ResortPage() {
       <Text style={styles.info}>🎫 Skipass: {resort.price}</Text>
       <Text style={styles.description}>{resort.description}</Text>
 
-      <TouchableOpacity style={styles.button}>
+      <TouchableOpacity style={styles.button} onPress={handleBuyPass}>
         <Text style={styles.buttonText}>Buy a pass</Text>
       </TouchableOpacity>
     </LinearGradient>

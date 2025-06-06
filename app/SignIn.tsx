@@ -15,15 +15,14 @@ export default function SignIn() {
       return;
     }
 
-    const { data, error } = await supabase
-      .from("users")
-      .select("*")
-      .eq("email", email)
-      .eq("password", password)
-      .single();
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-    if (error || !data) {
-      alert("Invalid credentials");
+    if (error || !data.session) {
+      console.error("Login failed:", error?.message);
+      alert("Invalid login credentials");
     } else {
       console.log("Login successful:", data);
       router.push("/Home");
@@ -52,7 +51,7 @@ export default function SignIn() {
         placeholderTextColor="#999"
       />
 
-      <TouchableOpacity style={styles.button} onPress={handleLogin}> 
+      <TouchableOpacity style={styles.button} onPress={handleLogin}>
         <Text style={styles.buttonText}>Login</Text>
       </TouchableOpacity>
 
