@@ -2,6 +2,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Link, useRouter } from "expo-router";
 import { useState } from "react";
 import {
+  Alert,
   Modal,
   ScrollView,
   StyleSheet,
@@ -11,6 +12,7 @@ import {
   View,
 } from "react-native";
 import { useFavorites } from "../context/FavoritesContext";
+import { supabase } from "../lib/supabaseClient";
 
 const resorts = [
   {
@@ -70,6 +72,33 @@ export default function Explore() {
     setMenuVisible(false);
   };
 
+  const handleBuyPass = async (resortName: string, price: string) => {
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      Alert.alert("You must be logged in to buy a pass.");
+      return;
+    }
+
+    const { error } = await supabase.from("purchases").insert([
+      {
+        user_id: user.id,
+        resort: resortName,
+        price: price,
+      },
+    ]);
+
+    if (error) {
+      console.error("Purchase failed:", error.message);
+      Alert.alert("Purchase failed.");
+    } else {
+      Alert.alert("Pass purchased successfully!");
+    }
+  };
+
   return (
     <LinearGradient colors={["#E0F7FA", "#80DEEA"]} style={styles.container}>
       <View style={styles.header}>
@@ -85,6 +114,7 @@ export default function Explore() {
         value={search}
         onChangeText={setSearch}
       />
+
       <ScrollView contentContainerStyle={styles.list}>
         {filteredResorts.map((resort, index) => (
           <View key={index} style={styles.card}>
@@ -97,21 +127,28 @@ export default function Explore() {
                 <Text style={styles.detail}>⛰ Difficulty: {resort.difficulty}</Text>
               </TouchableOpacity>
             </Link>
-              <TouchableOpacity
-                style={styles.favoriteButton}
-                onPress={() =>
-                addFavorite({
-                id: resort.routeName,
-                name: resort.name,
-                location: resort.location,
-                price: resort.price,
-                routeName: resort.routeName, // ✅ make sure this is included
-            })
-          }
-          >
-          <Text style={styles.favoriteText}>♡ Add to Favorites</Text>
-        </TouchableOpacity>
 
+            <TouchableOpacity
+              style={styles.favoriteButton}
+              onPress={() =>
+                addFavorite({
+                  id: resort.routeName,
+                  name: resort.name,
+                  location: resort.location,
+                  price: resort.price,
+                  routeName: resort.routeName,
+                })
+              }
+            >
+              <Text style={styles.favoriteText}>♡ Add to Favorites</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.buyButton}
+              onPress={() => handleBuyPass(resort.name, resort.price)}
+            >
+              <Text style={styles.buyText}>🎟 Buy Pass</Text>
+            </TouchableOpacity>
           </View>
         ))}
       </ScrollView>
@@ -232,5 +269,17 @@ const styles = StyleSheet.create({
   menuItem: {
     fontSize: 16,
     paddingVertical: 10,
+  },
+  buyButton: {
+    marginTop: 8,
+    backgroundColor: "#00796B",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    alignSelf: "flex-start",
+  },
+  buyText: {
+    color: "#FFF",
+    fontWeight: "600",
   },
 });
