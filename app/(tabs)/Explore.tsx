@@ -1,6 +1,6 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { Link, useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Alert,
   Modal,
@@ -11,57 +11,40 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useFavorites } from "../context/FavoritesContext";
-import { supabase } from "../lib/supabaseClient";
+import { useFavorites } from "../../context/FavoritesContext";
+import { supabase } from "../../lib/supabaseClient";
 
-const resorts = [
-  {
-    name: "Pârtia Rărau",
-    location: "Câmpulung Moldovenesc",
-    price: "120 RON / day",
-    length: "2.8 km",
-    difficulty: "Intermediate",
-    routeName: "PartiaRarau",
-  },
-  {
-    name: "Borșa – Pârtia Olimpică",
-    location: "Borșa, Maramureș",
-    price: "130 RON / day",
-    length: "2.65 km",
-    difficulty: "Intermediate (Red)",
-    routeName: "PartiaBorsa",
-  },
-  {
-    name: "Straja",
-    location: "Hunedoara",
-    price: "130 RON / day",
-    length: "3.4 km",
-    difficulty: "Intermediate",
-    routeName: "Straja",
-  },
-  {
-    name: "Poiana Brașov",
-    location: "Brașov",
-    price: "170 RON / day",
-    length: "4.8 km",
-    difficulty: "Advanced",
-    routeName: "PoianaBrasov",
-  },
-  {
-    name: "Arena Platoș",
-    location: "Sibiu",
-    price: "90 RON / day",
-    length: "1.5 km",
-    difficulty: "Beginner",
-    routeName: "ArenaPlatos",
-  },
-];
+interface Resort {
+  id: string;
+  name: string;
+  location: string;
+  price: string;
+  length: string;
+  difficulty: string;
+  route_name: string;
+}
 
 export default function Explore() {
   const [search, setSearch] = useState("");
   const [menuVisible, setMenuVisible] = useState(false);
+  const [resorts, setResorts] = useState<Resort[]>([]);
   const router = useRouter();
   const { addFavorite } = useFavorites();
+
+  useEffect(() => {
+    const fetchResorts = async () => {
+      const { data, error } = await supabase.from("resorts").select("*");
+
+      if (error) {
+        console.error("Failed to fetch resorts:", error.message);
+        return;
+      }
+
+      setResorts(data as Resort[]);
+    };
+
+    fetchResorts();
+  }, []);
 
   const filteredResorts = resorts.filter((resort) =>
     resort.name.toLowerCase().includes(search.toLowerCase())
@@ -116,9 +99,9 @@ export default function Explore() {
       />
 
       <ScrollView contentContainerStyle={styles.list}>
-        {filteredResorts.map((resort, index) => (
-          <View key={index} style={styles.card}>
-            <Link href={`/partii/${resort.routeName}`} asChild>
+        {filteredResorts.map((resort) => (
+          <View key={resort.id} style={styles.card}>
+            <Link href={`/partii/${resort.route_name}`} asChild>
               <TouchableOpacity>
                 <Text style={styles.resortName}>{resort.name}</Text>
                 <Text style={styles.resortLocation}>{resort.location}</Text>
@@ -132,11 +115,11 @@ export default function Explore() {
               style={styles.favoriteButton}
               onPress={() =>
                 addFavorite({
-                  id: resort.routeName,
+                  id: resort.route_name,
                   name: resort.name,
                   location: resort.location,
                   price: resort.price,
-                  routeName: resort.routeName,
+                  routeName: resort.route_name,
                 })
               }
             >

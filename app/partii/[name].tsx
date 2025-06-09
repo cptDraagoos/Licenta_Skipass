@@ -1,114 +1,62 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams } from "expo-router";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
 import { supabase } from "../../lib/supabaseClient";
 
-const resortDetails = {
-  PartiaRarau: {
-    name: "Pârtia Rarău",
-    location: "Câmpulung Moldovenesc",
-    price: "120 RON / day",
-    length: "2.8 km",
-    difficulty: "Intermediate",
-    lift: "Chairlift available to reach the top.",
-    rental: "Equipment rental available near the base station.",
-    images: [require("../../pic/rarau1.jpg"), require("../../pic/rarau2.jpg")],
-    description:
-      "Located in the beautiful Bucovina region, Pârtia Rarău is a modern ski slope surrounded by scenic forest landscapes. It offers a relaxing and scenic experience ideal for intermediate skiers. The resort has snowmaking equipment, a chairlift, and cozy nearby chalets.",
-  },
-  PartiaBorsa: {
-    name: "Borșa – Pârtia Olimpică",
-    location: "Borșa, Maramureș",
-    price: "130 RON / day",
-    length: "2.65 km",
-    difficulty: "Intermediate (Red)",
-    lift: "Modern gondola lift to the summit.",
-    rental: "Full equipment rental services available on-site.",
-    description:
-      "Featuring Romania's first Olympic-grade slope, Pârtia Olimpică in Borșa is a modern resort with gondola lifts, snowmaking systems, and night skiing. It offers a high-quality experience for intermediate skiers and breathtaking views of the Rodna Mountains.",
-  },
-  Straja: {
-    name: "Straja",
-    location: "Hunedoara",
-    price: "130 RON / day",
-    length: "3.4 km",
-    difficulty: "Intermediate",
-    lift: "Chairlifts and surface lifts available.",
-    rental: "Several rental shops are available in the village.",
-    description:
-      "Straja is a well-developed ski area in the Jiu Valley with 12 slopes and beautiful mountain views. It’s ideal for families and intermediate skiers looking for variety and comfort.",
-  },
-  PoianaBrasov: {
-    name: "Poiana Brașov",
-    location: "Brașov",
-    price: "170 RON / day",
-    length: "4.8 km",
-    difficulty: "Advanced",
-    lift: "Gondola and chairlifts serving the mountain.",
-    rental: "Wide range of ski rental centers around the resort.",
-    description:
-      "Romania’s most famous ski resort, Poiana Brașov offers world-class infrastructure, ski schools, and a wide selection of slopes. Ideal for advanced skiers and international visitors.",
-  },
-  ArenaPlatos: {
-    name: "Arena Platoș",
-    location: "Sibiu",
-    price: "90 RON / day",
-    length: "1.5 km",
-    difficulty: "Beginner",
-    lift: "Surface lift (button lift) available.",
-    rental: "Equipment rental and snow fun park nearby.",
-    description:
-      "Arena Platoș is perfect for beginners and families, with gentle slopes, snow tubing, ski schools, and fun parks. Located in the scenic Păltiniș area near Sibiu.",
-  },
-};
-
-export default function ResortPage() {
+export default function ResortDetails() {
   const { name } = useLocalSearchParams();
-  const resort = resortDetails[name as keyof typeof resortDetails];
+  const [resort, setResort] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-  const handleBuyPass = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
+  useEffect(() => {
+    const fetchResort = async () => {
+      const { data, error } = await supabase
+        .from("resorts")
+        .select("*")
+        .eq("route_name", name)
+        .single();
 
-    if (!user) {
-      alert("You must be logged in to buy a pass.");
-      return;
-    }
+      if (error) {
+        console.error("Error fetching resort:", error.message);
+      } else {
+        setResort(data);
+      }
 
-    const { error } = await supabase.from("skipasses").insert({
-      user_id: user.id,
-      resort: resort.name,
-    });
+      setLoading(false);
+    };
 
-    if (error) {
-      console.error("Error buying pass:", error);
-      alert("Something went wrong. Try again.");
-    } else {
-      alert(`Pass for ${resort.name} successfully purchased!`);
-    }
-  };
+    fetchResort();
+  }, [name]);
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#00796B" />
+      </View>
+    );
+  }
 
   if (!resort) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.notFound}>Resort not found.</Text>
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>Resort not found.</Text>
       </View>
     );
   }
 
   return (
     <LinearGradient colors={["#E0F7FA", "#80DEEA"]} style={styles.container}>
-      <Text style={styles.title}>{resort.name}</Text>
-      <Text style={styles.info}>📍 {resort.location}</Text>
-      <Text style={styles.info}>🎿 Length: {resort.length}</Text>
-      <Text style={styles.info}>⛰ Difficulty: {resort.difficulty}</Text>
-      <Text style={styles.info}>🚡 Lift Access: {resort.lift}</Text>
-      <Text style={styles.info}>🎒 Equipment Rental: {resort.rental}</Text>
-      <Text style={styles.info}>🎫 Skipass: {resort.price}</Text>
-      <Text style={styles.description}>{resort.description}</Text>
-
-      <TouchableOpacity style={styles.button} onPress={handleBuyPass}>
-        <Text style={styles.buttonText}>Buy a pass</Text>
-      </TouchableOpacity>
+      <ScrollView contentContainerStyle={styles.content}>
+        <Text style={styles.title}>{resort.name}</Text>
+        <Text style={styles.location}>📍 {resort.location}</Text>
+        <Text style={styles.detail}>🎫 {resort.price}</Text>
+        <Text style={styles.detail}>🎿 Length: {resort.length}</Text>
+        <Text style={styles.detail}>⛰ Difficulty: {resort.difficulty}</Text>
+        <Text style={styles.detail}>🚡 Lift: {resort.lift}</Text>
+        <Text style={styles.detail}>🎒 Rental: {resort.rental}</Text>
+        <Text style={styles.description}>{resort.description}</Text>
+      </ScrollView>
     </LinearGradient>
   );
 }
@@ -116,43 +64,45 @@ export default function ResortPage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 30,
-    justifyContent: "center",
+  },
+  content: {
+    padding: 20,
+    paddingBottom: 40,
   },
   title: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: "bold",
-    color: "#000",
+    color: "#00796B",
     marginBottom: 10,
   },
-  info: {
+  location: {
     fontSize: 16,
-    marginVertical: 4,
-  },
-  description: {
-    fontSize: 14,
-    marginTop: 12,
+    marginBottom: 10,
     color: "#333",
   },
-  button: {
-    backgroundColor: "#00796B",
-    marginTop: 30,
-    padding: 14,
-    borderRadius: 10,
-    alignItems: "center",
+  detail: {
+    fontSize: 14,
+    marginVertical: 2,
+    color: "#333",
   },
-  buttonText: {
-    color: "#FFF",
-    fontSize: 16,
-    fontWeight: "bold",
+  description: {
+    marginTop: 15,
+    fontSize: 14,
+    lineHeight: 20,
+    color: "#555",
   },
-  center: {
+  loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
   },
-  notFound: {
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  errorText: {
     fontSize: 18,
-    color: "red",
+    color: "#C00",
   },
 });
