@@ -66,20 +66,13 @@ export default function Explore() {
       return;
     }
 
-    const { error } = await supabase.from("purchases").insert([
-      {
-        user_id: user.id,
+    router.push({
+      pathname: "/Checkout",
+      params: {
         resort: resortName,
         price: price,
       },
-    ]);
-
-    if (error) {
-      console.error("Purchase failed:", error.message);
-      Alert.alert("Purchase failed.");
-    } else {
-      Alert.alert("Pass purchased successfully!");
-    }
+    });
   };
 
   return (

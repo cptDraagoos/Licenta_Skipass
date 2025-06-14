@@ -1,7 +1,6 @@
 import { LinearGradient } from "expo-linear-gradient";
-import { Link } from "expo-router";
 import { useEffect, useState } from "react";
-import { FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { supabase } from "../../lib/supabaseClient";
 
 interface Booking {
@@ -9,35 +8,56 @@ interface Booking {
   resort: string;
   price: string;
   purchase_date: string;
+  activated_at: string | null;
 }
 
 export default function Bookings() {
   const [bookings, setBookings] = useState<Booking[]>([]);
 
+  const fetchBookings = async () => {
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      console.error("User not authenticated");
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("purchases")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("purchase_date", { ascending: false });
+
+    if (error) {
+      console.error("Error fetching bookings:", error.message);
+    } else {
+      const validBookings = (data as Booking[]).filter((booking) => {
+        if (!booking.activated_at) return true;
+        const activated = new Date(booking.activated_at);
+        const now = new Date();
+        return now.getTime() - activated.getTime() < 12 * 60 * 60 * 1000;
+      });
+      setBookings(validBookings);
+    }
+  };
+
+  const handleActivate = async (bookingId: string) => {
+    const { error } = await supabase
+      .from("purchases")
+      .update({ activated_at: new Date().toISOString() })
+      .eq("id", bookingId);
+
+    if (error) {
+      Alert.alert("Error", "Failed to activate ticket.");
+    } else {
+      fetchBookings();
+    }
+  };
+
   useEffect(() => {
-    const fetchBookings = async () => {
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
-
-      if (userError || !user) {
-        console.error("User not authenticated");
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from("purchases")
-        .select("*")
-        .eq("user_id", user.id);
-
-      if (error) {
-        console.error("Error fetching bookings:", error.message);
-      } else {
-        setBookings(data as Booking[]);
-      }
-    };
-
     fetchBookings();
   }, []);
 
@@ -55,11 +75,16 @@ export default function Bookings() {
               📅 {new Date(item.purchase_date).toLocaleDateString()}
             </Text>
 
-            <Link href="/Scan" asChild>
-              <TouchableOpacity style={styles.scanButton}>
-                <Text style={styles.scanText}>Scan NFC</Text>
+            {item.activated_at ? (
+              <Text style={styles.activated}>✅ Activated</Text>
+            ) : (
+              <TouchableOpacity
+                style={styles.scanButton}
+                onPress={() => handleActivate(item.id)}
+              >
+                <Text style={styles.scanText}>Activate Ticket</Text>
               </TouchableOpacity>
-            </Link>
+            )}
           </View>
         )}
         ListEmptyComponent={<Text style={styles.empty}>No bookings found.</Text>}
@@ -97,6 +122,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#444",
     marginTop: 4,
+  },
+  activated: {
+    marginTop: 10,
+    color: "green",
+    fontWeight: "bold",
   },
   empty: {
     textAlign: "center",

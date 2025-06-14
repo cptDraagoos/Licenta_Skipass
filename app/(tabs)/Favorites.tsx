@@ -1,32 +1,33 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { FlatList, StyleSheet, Text, TouchableOpacity } from "react-native";
-
-interface FavoriteResort {
-  id: string;
-  name: string;
-  location: string;
-  price: string;
-}
+import { useFavorites } from "../../context/FavoritesContext";
 
 export default function Favorites() {
   const router = useRouter();
-  const favoritesData: FavoriteResort[] = [];
+  const { favorites } = useFavorites(); 
 
   return (
     <LinearGradient colors={["#E0F7FA", "#80DEEA"]} style={styles.container}>
       <Text style={styles.title}>Favorites / Wishlist</Text>
       <FlatList
-        data={favoritesData}
+        data={favorites}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <TouchableOpacity style={styles.card} onPress={() => router.push(`/partii/${item.name.replaceAll(" ", "").replaceAll("-", "")}`)}>
+          <TouchableOpacity
+            style={styles.card}
+            onPress={() => router.push(`/partii/${item.routeName}`)} 
+          >
             <Text style={styles.name}>{item.name}</Text>
             <Text style={styles.detail}>{item.location}</Text>
             <Text style={styles.detail}>{item.price}</Text>
           </TouchableOpacity>
         )}
-        ListEmptyComponent={<Text style={styles.empty}>No favorites yet. Add some from Explore!</Text>}
+        ListEmptyComponent={
+          <Text style={styles.empty}>
+            No favorites yet. Add some from Explore!
+          </Text>
+        }
         contentContainerStyle={{ paddingBottom: 40 }}
       />
     </LinearGradient>

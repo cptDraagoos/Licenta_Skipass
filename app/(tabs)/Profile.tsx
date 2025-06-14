@@ -1,18 +1,82 @@
-import React, { useState } from "react";
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { supabase } from "../../lib/supabaseClient";
 
 export default function Profile() {
-  const [name, setName] = useState("Dragos Ibanescu");
-  const [email, setEmail] = useState("dragos.ibanescu@student.usv.ro");
-  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
+  const [password, setPassword] = useState(""); // For optional password update
 
-  const handleSave = () => {
-    // Will later call backend here
-    console.log({ name, email, password });
+  useEffect(() => {
+    const fetchProfile = async () => {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        console.error("No user found:", userError?.message);
+        Alert.alert("Error", "No user logged in.");
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("users")
+        .select("*")
+        .eq("id", user.id)
+        .single();
+
+      if (error) {
+        console.error("Profile fetch failed:", error.message);
+        Alert.alert("Error", "No user profile found.");
+      } else {
+        setName(data.name || "");
+        setEmail(data.email || "");
+      }
+
+      setLoading(false);
+    };
+
+    fetchProfile();
+  }, []);
+
+  const handleSave = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { error } = await supabase
+      .from("users")
+      .update({
+        name,
+        email,
+        ...(password ? { password } : {}), // Only include if user entered
+      })
+      .eq("id", user.id);
+
+    if (error) {
+      console.error("Update error:", error.message);
+      Alert.alert("Update failed", error.message);
+    } else {
+      Alert.alert("Success", "Profile updated.");
+    }
   };
 
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#00796B" />
+      </View>
+    );
+  }
+
   return (
-    <View style={styles.container}>
+    <LinearGradient colors={["#E0F7FA", "#80DEEA"]} style={styles.container}>
       <TextInput
         style={styles.input}
         value={name}
@@ -30,14 +94,14 @@ export default function Profile() {
         style={styles.input}
         value={password}
         onChangeText={setPassword}
-        placeholder="New Password"
+        placeholder="New Password (optional)"
         secureTextEntry
       />
 
       <TouchableOpacity onPress={handleSave} style={styles.button}>
         <Text style={styles.buttonText}>Save Changes</Text>
       </TouchableOpacity>
-    </View>
+    </LinearGradient>
   );
 }
 
@@ -45,9 +109,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 24,
-    backgroundColor: "#E0F7FA",
     alignItems: "center",
     justifyContent: "center",
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
   input: {
     width: "100%",
@@ -55,9 +123,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderRadius: 8,
     marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#00796B",
   },
   button: {
-    marginTop: 10,
     backgroundColor: "#00796B",
     paddingVertical: 14,
     paddingHorizontal: 32,
