@@ -29,17 +29,15 @@ export default function Explore() {
   const [menuVisible, setMenuVisible] = useState(false);
   const [resorts, setResorts] = useState<Resort[]>([]);
   const router = useRouter();
-  const { addFavorite } = useFavorites();
+  const { addFavorite, removeFavorite, favorites } = useFavorites();
 
   useEffect(() => {
     const fetchResorts = async () => {
       const { data, error } = await supabase.from("resorts").select("*");
-
       if (error) {
         console.error("Failed to fetch resorts:", error.message);
         return;
       }
-
       setResorts(data as Resort[]);
     };
 
@@ -68,10 +66,7 @@ export default function Explore() {
 
     router.push({
       pathname: "/Checkout",
-      params: {
-        resort: resortName,
-        price: price,
-      },
+      params: { resort: resortName, price: price },
     });
   };
 
@@ -92,41 +87,49 @@ export default function Explore() {
       />
 
       <ScrollView contentContainerStyle={styles.list}>
-        {filteredResorts.map((resort) => (
-          <View key={resort.id} style={styles.card}>
-            <Link href={`/partii/${resort.route_name}`} asChild>
-              <TouchableOpacity>
-                <Text style={styles.resortName}>{resort.name}</Text>
-                <Text style={styles.resortLocation}>{resort.location}</Text>
-                <Text style={styles.detail}>🎫 Skipass: {resort.price}</Text>
-                <Text style={styles.detail}>🎿 Slope Length: {resort.length}</Text>
-                <Text style={styles.detail}>⛰ Difficulty: {resort.difficulty}</Text>
+        {filteredResorts.map((resort) => {
+          const isFavorite = favorites.some(f => f.id === resort.route_name);
+
+          return (
+            <View key={resort.id} style={styles.card}>
+              <Link href={`/partii/${resort.route_name}`} asChild>
+                <TouchableOpacity>
+                  <Text style={styles.resortName}>{resort.name}</Text>
+                  <Text style={styles.resortLocation}>{resort.location}</Text>
+                  <Text style={styles.detail}>🎫 Skipass: {resort.price}</Text>
+                  <Text style={styles.detail}>🎿 Slope Length: {resort.length}</Text>
+                  <Text style={styles.detail}>⛰ Difficulty: {resort.difficulty}</Text>
+                </TouchableOpacity>
+              </Link>
+
+              <TouchableOpacity
+                style={styles.favoriteButton}
+                onPress={() =>
+                  isFavorite
+                    ? removeFavorite(resort.route_name)
+                    : addFavorite({
+                        id: resort.route_name,
+                        name: resort.name,
+                        location: resort.location,
+                        price: resort.price,
+                        routeName: resort.route_name,
+                      })
+                }
+              >
+                <Text style={styles.favoriteText}>
+                  {isFavorite ? "❤️ In Favorites" : "🖤 Add to Favorites"}
+                </Text>
               </TouchableOpacity>
-            </Link>
 
-            <TouchableOpacity
-              style={styles.favoriteButton}
-              onPress={() =>
-                addFavorite({
-                  id: resort.route_name,
-                  name: resort.name,
-                  location: resort.location,
-                  price: resort.price,
-                  routeName: resort.route_name,
-                })
-              }
-            >
-              <Text style={styles.favoriteText}>♡ Add to Favorites</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.buyButton}
-              onPress={() => handleBuyPass(resort.name, resort.price)}
-            >
-              <Text style={styles.buyText}>🎟 Buy Pass</Text>
-            </TouchableOpacity>
-          </View>
-        ))}
+              <TouchableOpacity
+                style={styles.buyButton}
+                onPress={() => handleBuyPass(resort.name, resort.price)}
+              >
+                <Text style={styles.buyText}>🎟 Buy Pass</Text>
+              </TouchableOpacity>
+            </View>
+          );
+        })}
       </ScrollView>
 
       <Modal
