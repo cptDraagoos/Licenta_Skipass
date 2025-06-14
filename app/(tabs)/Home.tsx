@@ -30,6 +30,9 @@ export default function Home() {
           <TouchableOpacity style={styles.button} onPress={() => router.push("/Bookings")}>
             <Text style={styles.buttonText}>My Bookings</Text>
           </TouchableOpacity>
+          <TouchableOpacity style={styles.button} onPress={() => router.push("/ActiveBookings")}>
+            <Text style={styles.buttonText}>Active Bookings</Text>
+          </TouchableOpacity>
           <TouchableOpacity style={styles.button} onPress={() => router.push("/Profile")}>
             <Text style={styles.buttonText}>Profile</Text>
           </TouchableOpacity>
@@ -58,6 +61,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
     borderRadius: 10,
     marginBottom: 20,
+    width: "80%",
+    alignItems: "center",
   },
   buttonText: {
     color: "#fff",

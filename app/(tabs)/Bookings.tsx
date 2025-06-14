@@ -1,6 +1,8 @@
+// Bookings.tsx
 import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { supabase } from "../../lib/supabaseClient";
 
 interface Booking {
@@ -13,17 +15,13 @@ interface Booking {
 
 export default function Bookings() {
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const router = useRouter();
 
   const fetchBookings = async () => {
     const {
       data: { user },
-      error: userError,
     } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      console.error("User not authenticated");
-      return;
-    }
+    if (!user) return;
 
     const { data, error } = await supabase
       .from("purchases")
@@ -31,39 +29,33 @@ export default function Bookings() {
       .eq("user_id", user.id)
       .order("purchase_date", { ascending: false });
 
-    if (error) {
-      console.error("Error fetching bookings:", error.message);
-    } else {
-      const validBookings = (data as Booking[]).filter((booking) => {
-        if (!booking.activated_at) return true;
-        const activated = new Date(booking.activated_at);
-        const now = new Date();
-        return now.getTime() - activated.getTime() < 12 * 60 * 60 * 1000;
-      });
-      setBookings(validBookings);
+    if (!error && data) {
+      setBookings(data);
     }
   };
 
-  const handleActivate = async (bookingId: string) => {
+  const activateBooking = async (id: string) => {
     const { error } = await supabase
       .from("purchases")
       .update({ activated_at: new Date().toISOString() })
-      .eq("id", bookingId);
-
-    if (error) {
-      Alert.alert("Error", "Failed to activate ticket.");
-    } else {
-      fetchBookings();
-    }
+      .eq("id", id);
+    if (!error) fetchBookings();
   };
 
   useEffect(() => {
     fetchBookings();
   }, []);
 
+  const getStatus = (activated_at: string | null) => {
+    if (!activated_at) return "Pending";
+    const activated = new Date(activated_at);
+    const now = new Date();
+    return now.getTime() - activated.getTime() < 12 * 60 * 60 * 1000 ? "Active" : "Expired";
+  };
+
   return (
     <LinearGradient colors={["#E0F7FA", "#80DEEA"]} style={styles.container}>
-      <Text style={styles.title}>My Skipass Bookings</Text>
+      <Text style={styles.title}>All Bookings</Text>
       <FlatList
         data={bookings}
         keyExtractor={(item) => item.id}
@@ -74,15 +66,23 @@ export default function Bookings() {
             <Text style={styles.detail}>
               📅 {new Date(item.purchase_date).toLocaleDateString()}
             </Text>
+            <Text style={styles.status}>Status: {getStatus(item.activated_at)}</Text>
 
-            {item.activated_at ? (
-              <Text style={styles.activated}>✅ Activated</Text>
-            ) : (
+            {item.activated_at === null && (
               <TouchableOpacity
-                style={styles.scanButton}
-                onPress={() => handleActivate(item.id)}
+                style={styles.activateButton}
+                onPress={() => activateBooking(item.id)}
               >
-                <Text style={styles.scanText}>Activate Ticket</Text>
+                <Text style={styles.activateText}>Activate</Text>
+              </TouchableOpacity>
+            )}
+
+            {getStatus(item.activated_at) === "Active" && (
+              <TouchableOpacity
+                style={styles.linkButton}
+                onPress={() => router.push("/ActiveBookings")}
+              >
+                <Text style={styles.activateText}>Go to Active Booking</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -123,18 +123,13 @@ const styles = StyleSheet.create({
     color: "#444",
     marginTop: 4,
   },
-  activated: {
-    marginTop: 10,
-    color: "green",
+  status: {
+    fontSize: 14,
+    marginTop: 8,
     fontWeight: "bold",
+    color: "#00796B",
   },
-  empty: {
-    textAlign: "center",
-    fontSize: 16,
-    color: "#666",
-    marginTop: 40,
-  },
-  scanButton: {
+  activateButton: {
     marginTop: 10,
     backgroundColor: "#00796B",
     paddingVertical: 8,
@@ -142,8 +137,17 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignSelf: "flex-start",
   },
-  scanText: {
+  activateText: {
     color: "#FFF",
     fontWeight: "600",
+  },
+  linkButton: {
+    marginTop: 10,
+  },
+  empty: {
+    textAlign: "center",
+    fontSize: 16,
+    color: "#666",
+    marginTop: 40,
   },
 });
