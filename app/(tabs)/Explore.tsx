@@ -18,40 +18,43 @@ interface Resort {
   id: string;
   name: string;
   location: string;
-  price: string;
   length: string;
   difficulty: string;
   route_name: string;
+  prices: { id: string; label: string; amount: string }[];
 }
 
 export default function Explore() {
   const [search, setSearch] = useState("");
   const [menuVisible, setMenuVisible] = useState(false);
   const [resorts, setResorts] = useState<Resort[]>([]);
+  const [selectedPrices, setSelectedPrices] = useState<{ [resortId: string]: string }>({});
   const router = useRouter();
-  const { addFavorite, removeFavorite, favorites } = useFavorites();
+  const { favorites, addFavorite, removeFavorite } = useFavorites();
 
   useEffect(() => {
     const fetchResorts = async () => {
-      const { data, error } = await supabase.from("resorts").select("*");
-      if (error) {
-        console.error("Failed to fetch resorts:", error.message);
+      const { data: resortsData, error } = await supabase.from("resorts").select("*");
+      if (error || !resortsData) {
+        console.error("Failed to fetch resorts:", error?.message);
         return;
       }
-      setResorts(data as Resort[]);
-    };
 
+      const { data: pricesData, error: pricesError } = await supabase.from("prices").select("*");
+      if (pricesError || !pricesData) {
+        console.error("Failed to fetch prices:", pricesError?.message);
+        return;
+      }
+
+      const resortsWithPrices = resortsData.map((resort) => ({
+        ...resort,
+        prices: pricesData.filter((p) => p.resort_id === resort.id),
+      }));
+
+      setResorts(resortsWithPrices);
+    };
     fetchResorts();
   }, []);
-
-  const filteredResorts = resorts.filter((resort) =>
-    resort.name.toLowerCase().includes(search.toLowerCase())
-  );
-
-  const handleLogout = () => {
-    console.log("Logging out...");
-    setMenuVisible(false);
-  };
 
   const handleBuyPass = async (resortName: string, price: string) => {
     const {
@@ -64,10 +67,26 @@ export default function Explore() {
       return;
     }
 
-    router.push({
-      pathname: "/Checkout",
-      params: { resort: resortName, price: price },
-    });
+    router.push({ pathname: "/Checkout", params: { resort: resortName, price } });
+  };
+
+  const filteredResorts = resorts.filter((resort) =>
+    resort.name.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const handleToggleFavorite = (resort: Resort) => {
+    const isFavorite = favorites.some((fav) => fav.id === resort.id);
+    if (isFavorite) {
+      removeFavorite(resort.id);
+    } else {
+      addFavorite({
+        id: resort.id,
+        name: resort.name,
+        location: resort.location,
+        price: resort.prices[0]?.amount || "",
+        routeName: resort.route_name,
+      });
+    }
   };
 
   return (
@@ -88,7 +107,7 @@ export default function Explore() {
 
       <ScrollView contentContainerStyle={styles.list}>
         {filteredResorts.map((resort) => {
-          const isFavorite = favorites.some(f => f.id === resort.route_name);
+          const isFavorite = favorites.some((f) => f.id === resort.id);
 
           return (
             <View key={resort.id} style={styles.card}>
@@ -96,36 +115,55 @@ export default function Explore() {
                 <TouchableOpacity>
                   <Text style={styles.resortName}>{resort.name}</Text>
                   <Text style={styles.resortLocation}>{resort.location}</Text>
-                  <Text style={styles.detail}>🎫 Skipass: {resort.price}</Text>
-                  <Text style={styles.detail}>🎿 Slope Length: {resort.length}</Text>
+                  <Text style={styles.detail}>🎿 Length: {resort.length}</Text>
                   <Text style={styles.detail}>⛰ Difficulty: {resort.difficulty}</Text>
                 </TouchableOpacity>
               </Link>
 
+              <View style={styles.priceOptionsContainer}>
+                {resort.prices.map((price) => {
+                  const isSelected =
+                    selectedPrices[resort.id] === price.amount ||
+                    (!selectedPrices[resort.id] && resort.prices[0]?.amount === price.amount);
+
+                  return (
+                    <TouchableOpacity
+                      key={price.id}
+                      onPress={() =>
+                        setSelectedPrices((prev) => ({ ...prev, [resort.id]: price.amount }))
+                      }
+                      style={[
+                        styles.priceButton,
+                        isSelected && styles.priceButtonSelected,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.priceButtonText,
+                          isSelected && styles.priceButtonTextSelected,
+                        ]}
+                      >
+                        {price.label} - {price.amount}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+              <TouchableOpacity
+                style={styles.buyButton}
+                onPress={() =>
+                  handleBuyPass(resort.name, selectedPrices[resort.id] || resort.prices[0]?.amount)
+                }
+              >
+                <Text style={styles.buyText}>🎟 Buy Pass</Text>
+              </TouchableOpacity>
               <TouchableOpacity
                 style={styles.favoriteButton}
-                onPress={() =>
-                  isFavorite
-                    ? removeFavorite(resort.route_name)
-                    : addFavorite({
-                        id: resort.route_name,
-                        name: resort.name,
-                        location: resort.location,
-                        price: resort.price,
-                        routeName: resort.route_name,
-                      })
-                }
+                onPress={() => handleToggleFavorite(resort)}
               >
                 <Text style={styles.favoriteText}>
                   {isFavorite ? "❤️ In Favorites" : "🖤 Add to Favorites"}
                 </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.buyButton}
-                onPress={() => handleBuyPass(resort.name, resort.price)}
-              >
-                <Text style={styles.buyText}>🎟 Buy Pass</Text>
               </TouchableOpacity>
             </View>
           );
@@ -138,10 +176,7 @@ export default function Explore() {
         animationType="fade"
         onRequestClose={() => setMenuVisible(false)}
       >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          onPress={() => setMenuVisible(false)}
-        >
+        <TouchableOpacity style={styles.modalOverlay} onPress={() => setMenuVisible(false)}>
           <View style={styles.menuTopRight}>
             <TouchableOpacity
               onPress={() => {
@@ -151,7 +186,7 @@ export default function Explore() {
             >
               <Text style={styles.menuItem}>Profile</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={handleLogout}>
+            <TouchableOpacity onPress={() => setMenuVisible(false)}>
               <Text style={styles.menuItem}>Logout</Text>
             </TouchableOpacity>
           </View>
@@ -260,5 +295,29 @@ const styles = StyleSheet.create({
   buyText: {
     color: "#FFF",
     fontWeight: "600",
+  },
+  priceOptionsContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginTop: 10,
+    gap: 8,
+  },
+  priceButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    backgroundColor: "#fff",
+    borderColor: "#00796B",
+    borderWidth: 1,
+    borderRadius: 8,
+  },
+  priceButtonSelected: {
+    backgroundColor: "#00796B",
+  },
+  priceButtonText: {
+    color: "#00796B",
+    fontWeight: "600",
+  },
+  priceButtonTextSelected: {
+    color: "#fff",
   },
 });

@@ -1,5 +1,6 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
+import * as Updates from "expo-updates"; // 👈 Import this
 import { useEffect, useState } from "react";
 import {
   SafeAreaView,
@@ -23,11 +24,16 @@ export default function Home() {
     checkSession();
   }, []);
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    await Updates.reloadAsync(); // 👈 Reload app to clear cached state
+  };
+
   return (
     <LinearGradient colors={["#E0F7FA", "#80DEEA"]} style={styles.gradient}>
       <SafeAreaView style={styles.container}>
         <StatusBar barStyle="dark-content" />
-        <Text style={styles.title}> Welcome to PeakPass</Text>
+        <Text style={styles.title}>Welcome to PeakPass</Text>
         <Text style={styles.subtitle}>Your gateway to ski resort passes</Text>
 
         {!userLoggedIn ? (
@@ -55,7 +61,13 @@ export default function Home() {
               style={styles.primaryButton}
               onPress={() => router.push("/Profile")}
             >
-              <Text style={styles.buttonText}>👤 Profile</Text>
+              <Text style={styles.buttonText}>Profile</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.primaryButton, { backgroundColor: "#E53935" }]}
+              onPress={handleLogout}
+            >
+              <Text style={styles.buttonText}>🚪 Logout</Text>
             </TouchableOpacity>
           </View>
         )}

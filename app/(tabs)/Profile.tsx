@@ -13,16 +13,18 @@ import { supabase } from "../../lib/supabaseClient";
 
 export default function Profile() {
   const [loading, setLoading] = useState(true);
+  const [notLoggedIn, setNotLoggedIn] = useState(false);
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
-  const [password, setPassword] = useState(""); // For optional password update
+  const [password, setPassword] = useState("");
 
   useEffect(() => {
     const fetchProfile = async () => {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) {
-        console.error("No user found:", userError?.message);
-        Alert.alert("Error", "No user logged in.");
+        console.warn("User not logged in.");
+        setNotLoggedIn(true);
+        setLoading(false);
         return;
       }
 
@@ -55,7 +57,7 @@ export default function Profile() {
       .update({
         name,
         email,
-        ...(password ? { password } : {}), // Only include if user entered
+        ...(password ? { password } : {}),
       })
       .eq("id", user.id);
 
@@ -72,6 +74,16 @@ export default function Profile() {
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#00796B" />
       </View>
+    );
+  }
+
+  if (notLoggedIn) {
+    return (
+      <LinearGradient colors={["#E0F7FA", "#80DEEA"]} style={styles.container}>
+        <Text style={styles.notLoggedInText}>
+          ❗ You need to be logged in to edit your profile.
+        </Text>
+      </LinearGradient>
     );
   }
 
@@ -136,5 +148,11 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "bold",
     fontSize: 16,
+  },
+  notLoggedInText: {
+    fontSize: 18,
+    color: "#C62828",
+    textAlign: "center",
+    paddingHorizontal: 20,
   },
 });
