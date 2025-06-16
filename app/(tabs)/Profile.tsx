@@ -20,7 +20,11 @@ export default function Profile() {
 
   useEffect(() => {
     const fetchProfile = async () => {
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
       if (userError || !user) {
         console.warn("User not logged in.");
         setNotLoggedIn(true);
@@ -49,7 +53,9 @@ export default function Profile() {
   }, []);
 
   const handleSave = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) return;
 
     const { error } = await supabase
@@ -91,26 +97,37 @@ export default function Profile() {
 
   return (
     <LinearGradient colors={["#E0F7FA", "#80DEEA"]} style={styles.container}>
-      <TextInput
-        style={styles.input}
-        value={name}
-        onChangeText={setName}
-        placeholder="Name"
-      />
-      <TextInput
-        style={styles.input}
-        value={email}
-        onChangeText={setEmail}
-        placeholder="Email"
-        keyboardType="email-address"
-      />
-      <TextInput
-        style={styles.input}
-        value={password}
-        onChangeText={setPassword}
-        placeholder="New Password (optional)"
-        secureTextEntry
-      />
+      <View style={styles.fieldGroup}>
+        <Text style={styles.label}>Name</Text>
+        <TextInput
+          style={styles.input}
+          value={name}
+          onChangeText={setName}
+          placeholder="Your name"
+        />
+      </View>
+
+      <View style={styles.fieldGroup}>
+        <Text style={styles.label}>Email</Text>
+        <TextInput
+          style={styles.input}
+          value={email}
+          onChangeText={setEmail}
+          placeholder="example@email.com"
+          keyboardType="email-address"
+        />
+      </View>
+
+      <View style={styles.fieldGroup}>
+        <Text style={styles.label}>New Password</Text>
+        <TextInput
+          style={styles.input}
+          value={password}
+          onChangeText={setPassword}
+          placeholder="••••••••"
+          secureTextEntry
+        />
+      </View>
 
       <TouchableOpacity onPress={handleSave} style={styles.button}>
         <Text style={styles.buttonText}>Save Changes</Text>
@@ -136,14 +153,23 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 20,
   },
+  fieldGroup: {
+    marginBottom: 16,
+  },
+  label: {
+    marginBottom: 6,
+    color: "#015958",
+    fontWeight: "600",
+    fontSize: 14,
+  },
   input: {
     width: "100%",
     padding: 12,
     backgroundColor: "#fff",
     borderRadius: 8,
-    marginBottom: 12,
     borderWidth: 1,
     borderColor: "#00796B",
+    fontSize: 16,
   },
   button: {
     backgroundColor: "#00796B",

@@ -1,24 +1,35 @@
+import { useFocusEffect } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useFavorites } from "../../context/FavoritesContext";
 import { supabase } from "../../lib/supabaseClient";
 
 export default function Favorites() {
   const router = useRouter();
-  const { favorites } = useFavorites();
+  const { favorites, refreshFavorites } = useFavorites();
   const [notLoggedIn, setNotLoggedIn] = useState(false);
 
-  useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { user }, error } = await supabase.auth.getUser();
-      if (error || !user) {
-        setNotLoggedIn(true);
-      }
-    };
-    checkAuth();
-  }, []);
+  const checkAuthAndRefresh = async () => {
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
+
+    if (error || !user) {
+      setNotLoggedIn(true);
+    } else {
+      setNotLoggedIn(false);
+      refreshFavorites(); // fetch from DB
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      checkAuthAndRefresh();
+    }, [])
+  );
 
   const handleBuyPass = (resortName: string, price: string) => {
     router.push({
