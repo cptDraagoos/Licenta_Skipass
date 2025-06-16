@@ -1,13 +1,13 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { supabase } from "../lib/supabaseClient";
 
@@ -22,78 +22,81 @@ export default function Checkout() {
   const { resort, price } = useLocalSearchParams();
 
   const handleFakePayment = async () => {
-  if (!cardName || !cardNumber || !expMonth || !expYear || !cvv) {
-    Alert.alert("Missing Info", "Please complete all fields.");
-    return;
-  }
-
-  const mm = parseInt(expMonth, 10);
-  const yy = parseInt(`20${expYear}`, 10);
-  const now = new Date();
-  const thisMonth = now.getMonth() + 1;
-  const thisYear = now.getFullYear();
-
-  if (isNaN(mm) || mm < 1 || mm > 12) {
-    Alert.alert("Invalid Month", "Please enter a valid expiration month (01-12).");
-    return;
-  }
-
-  if (isNaN(yy) || yy < thisYear || (yy === thisYear && mm < thisMonth)) {
-    Alert.alert("Card Expired", "The expiration date is in the past.");
-    return;
-  }
-
-  setLoading(true);
-
-  setTimeout(async () => {
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      Alert.alert("Login required", "Please login first.");
-      setLoading(false);
+    if (!cardName || !cardNumber || !expMonth || !expYear || !cvv) {
+      Alert.alert("Missing Info", "Please complete all fields.");
       return;
     }
 
-    const { error } = await supabase.from("purchases").insert([
-      {
-        user_id: user.id,
-        resort: resort,
-        price: price,
-        purchase_date: new Date().toISOString(),
-      },
-    ]);
+    const mm = parseInt(expMonth, 10);
+    const yy = parseInt(`20${expYear}`, 10);
+    const now = new Date();
+    const thisMonth = now.getMonth() + 1;
+    const thisYear = now.getFullYear();
 
-    setLoading(false);
+    if (isNaN(mm) || mm < 1 || mm > 12) {
+      Alert.alert("Invalid Month", "Please enter a valid expiration month (01-12).");
+      return;
+    }
 
-    if (error) {
-      console.error("Insert failed", error);
-      Alert.alert("Payment failed", "Please try again.");
-    } else {
-      Alert.alert("Success", "Your pass was purchased successfully!", [
+    if (isNaN(yy) || yy < thisYear || (yy === thisYear && mm < thisMonth)) {
+      Alert.alert("Card Expired", "The expiration date is in the past.");
+      return;
+    }
+
+    setLoading(true);
+
+    setTimeout(async () => {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError || !user) {
+        Alert.alert("Login required", "Please login first.");
+        setLoading(false);
+        return;
+      }
+
+      const { error } = await supabase.from("purchases").insert([
         {
-          text: "OK",
-          onPress: () => router.replace("/(tabs)/Bookings"),
+          user_id: user.id,
+          resort: resort,
+          price: price,
+          purchase_date: new Date().toISOString(),
         },
       ]);
-    }
-  }, 2000);
-};
+
+      setLoading(false);
+
+      if (error) {
+        console.error("Insert failed", error);
+        Alert.alert("Payment failed", "Please try again.");
+      } else {
+        Alert.alert("Success", "Your pass was purchased successfully!", [
+          {
+            text: "OK",
+            onPress: () => router.replace("/(tabs)/Bookings"),
+          },
+        ]);
+      }
+    }, 2000);
+  };
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Checkout</Text>
 
+      <Text style={styles.label}>Cardholder Name</Text>
       <TextInput
-        placeholder="Cardholder Name"
+        placeholder="John Doe"
         value={cardName}
         onChangeText={setCardName}
         style={styles.input}
       />
+
+      <Text style={styles.label}>Card Number</Text>
       <TextInput
-        placeholder="Card Number"
+        placeholder="1234 5678 9012 3456"
         value={cardNumber}
         onChangeText={setCardNumber}
         keyboardType="numeric"
@@ -101,6 +104,7 @@ export default function Checkout() {
         maxLength={16}
       />
 
+      <Text style={styles.label}>Expiration Date(MM/YY) CVV</Text>
       <View style={styles.expiryContainer}>
         <TextInput
           placeholder="MM"
@@ -138,7 +142,7 @@ export default function Checkout() {
         {loading ? (
           <ActivityIndicator color="#FFF" />
         ) : (
-          <Text style={styles.buttonText}>Pay {price}</Text>
+          <Text style={styles.buttonText}>Pay {price} RON</Text>
         )}
       </TouchableOpacity>
     </View>
@@ -153,10 +157,17 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   title: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: "bold",
-    marginBottom: 20,
+    marginBottom: 30,
     textAlign: "center",
+    color: "#00796B",
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#333",
+    marginBottom: 4,
   },
   input: {
     backgroundColor: "white",
@@ -171,11 +182,11 @@ const styles = StyleSheet.create({
   expiryContainer: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "flex-start",
+    marginBottom: 20,
+    gap: 5,
   },
   expiryInput: {
     width: 60,
-    marginRight: 5,
   },
   slash: {
     fontSize: 20,
@@ -183,7 +194,7 @@ const styles = StyleSheet.create({
     color: "#444",
   },
   cvvInput: {
-    width: 80,
+    width: 70,
     marginLeft: 10,
   },
   button: {
@@ -191,7 +202,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     alignItems: "center",
     borderRadius: 8,
-    marginTop: 20,
+    marginTop: 10,
   },
   buttonText: {
     color: "white",

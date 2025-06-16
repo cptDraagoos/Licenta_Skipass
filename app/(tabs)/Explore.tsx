@@ -3,7 +3,6 @@ import { Link, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   Alert,
-  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -26,7 +25,6 @@ interface Resort {
 
 export default function Explore() {
   const [search, setSearch] = useState("");
-  const [menuVisible, setMenuVisible] = useState(false);
   const [resorts, setResorts] = useState<Resort[]>([]);
   const [selectedPrices, setSelectedPrices] = useState<{ [resortId: string]: string }>({});
   const router = useRouter();
@@ -93,9 +91,6 @@ export default function Explore() {
     <LinearGradient colors={["#E0F7FA", "#80DEEA"]} style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Explore Ski Resorts</Text>
-        <TouchableOpacity onPress={() => setMenuVisible(true)}>
-          <Text style={styles.menuText}>⋯</Text>
-        </TouchableOpacity>
       </View>
 
       <TextInput
@@ -169,29 +164,6 @@ export default function Explore() {
           );
         })}
       </ScrollView>
-
-      <Modal
-        visible={menuVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setMenuVisible(false)}
-      >
-        <TouchableOpacity style={styles.modalOverlay} onPress={() => setMenuVisible(false)}>
-          <View style={styles.menuTopRight}>
-            <TouchableOpacity
-              onPress={() => {
-                setMenuVisible(false);
-                router.push("/Profile");
-              }}
-            >
-              <Text style={styles.menuItem}>Profile</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => setMenuVisible(false)}>
-              <Text style={styles.menuItem}>Logout</Text>
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
     </LinearGradient>
   );
 }
@@ -204,18 +176,13 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    justifyContent: "center",
     marginBottom: 10,
   },
   title: {
     fontSize: 28,
     fontWeight: "bold",
     color: "#000",
-  },
-  menuText: {
-    fontSize: 24,
-    paddingHorizontal: 10,
   },
   searchInput: {
     backgroundColor: "#ffffffcc",
@@ -266,23 +233,6 @@ const styles = StyleSheet.create({
   favoriteText: {
     color: "#00796B",
     fontWeight: "600",
-  },
-  modalOverlay: {
-    flex: 1,
-  },
-  menuTopRight: {
-    position: "absolute",
-    top: 70,
-    right: 20,
-    backgroundColor: "white",
-    borderRadius: 10,
-    padding: 15,
-    width: 160,
-    elevation: 5,
-  },
-  menuItem: {
-    fontSize: 16,
-    paddingVertical: 10,
   },
   buyButton: {
     marginTop: 8,

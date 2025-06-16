@@ -80,9 +80,11 @@ export default function Profile() {
   if (notLoggedIn) {
     return (
       <LinearGradient colors={["#E0F7FA", "#80DEEA"]} style={styles.container}>
-        <Text style={styles.notLoggedInText}>
-          ❗ You need to be logged in to edit your profile.
-        </Text>
+        <View style={styles.centeredMessage}>
+          <Text style={styles.warningText}>
+            ❗ You need to be logged in to access your profile.
+          </Text>
+        </View>
       </LinearGradient>
     );
   }
@@ -121,13 +123,18 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 24,
-    alignItems: "center",
     justifyContent: "center",
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+  },
+  centeredMessage: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 20,
   },
   input: {
     width: "100%",
@@ -143,16 +150,17 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 32,
     borderRadius: 8,
+    alignSelf: "center",
+    marginTop: 12,
   },
   buttonText: {
     color: "#fff",
     fontWeight: "bold",
     fontSize: 16,
   },
-  notLoggedInText: {
+  warningText: {
     fontSize: 18,
     color: "#C62828",
     textAlign: "center",
-    paddingHorizontal: 20,
   },
 });

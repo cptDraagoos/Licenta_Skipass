@@ -3,6 +3,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -76,8 +77,21 @@ export default function ResortDetails() {
     fetchData();
   }, [name]);
 
-  const handleBuyPass = () => {
-    if (!resort || !selectedPrice) return;
+  const handleBuyPass = async () => {
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      Alert.alert("Login required", "You need to be logged in to buy a pass.");
+      return;
+    }
+
+    if (!resort || !selectedPrice) {
+      Alert.alert("Error", "Missing resort or price information.");
+      return;
+    }
 
     router.push({
       pathname: "/Checkout",
@@ -123,7 +137,7 @@ export default function ResortDetails() {
         <Text style={styles.detail}>🎒 Rental: {resort.rental}</Text>
         <Text style={styles.description}>{resort.description}</Text>
 
-        {/* Price options with buttons */}
+        {/* Price options */}
         {prices.length > 0 && (
           <View style={styles.pricesSection}>
             <Text style={styles.sectionTitle}>🎫 Select Skipass Type</Text>
@@ -158,7 +172,7 @@ export default function ResortDetails() {
           </View>
         )}
 
-        {/* Weather */}
+        {/* Weather Forecast */}
         {forecast.length > 0 && (
           <View style={styles.forecastContainer}>
             <Text style={styles.sectionTitle}>🌤 3-Day Weather Forecast</Text>
@@ -175,7 +189,7 @@ export default function ResortDetails() {
           </View>
         )}
 
-        {/* Webcam */}
+        {/* Webcams */}
         {resort.route_name === "PartiaRarau" && (
           <WebcamEmbed url="https://webcamromania.ro/webcam-partii-de-schi/webcam-rarau/" />
         )}
@@ -204,9 +218,7 @@ const styles = StyleSheet.create({
   detail: { fontSize: 16, marginVertical: 4, color: "#2E2E2E" },
   description: { marginTop: 20, fontSize: 16, lineHeight: 22, color: "#555" },
   sectionTitle: { fontSize: 18, fontWeight: "bold", color: "#00796B", marginBottom: 10 },
-  pricesSection: {
-    marginTop: 20,
-  },
+  pricesSection: { marginTop: 20 },
   priceOptions: {
     flexDirection: "row",
     flexWrap: "wrap",
