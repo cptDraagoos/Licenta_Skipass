@@ -12,67 +12,85 @@ import {
 import { supabase } from "../lib/supabaseClient";
 
 export default function Checkout() {
+  const { resort, price } = useLocalSearchParams();
+  const router = useRouter();
+
   const [cardName, setCardName] = useState("");
   const [cardNumber, setCardNumber] = useState("");
   const [expMonth, setExpMonth] = useState("");
   const [expYear, setExpYear] = useState("");
   const [cvv, setCvv] = useState("");
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
-  const { resort, price } = useLocalSearchParams();
+
+  const formatCardNumber = (input: string) => {
+    return input
+      .replace(/\D/g, "")
+      .replace(/(.{4})/g, "$1 ")
+      .trim()
+      .slice(0, 19); // Max 16 digits + 3 spaces
+  };
 
   const handleFakePayment = async () => {
-    if (!cardName || !cardNumber || !expMonth || !expYear || !cvv) {
+    const numberOnly = cardNumber.replace(/\s/g, "");
+
+    // Basic validation
+    if (!cardName || !numberOnly || !expMonth || !expYear || !cvv) {
       Alert.alert("Missing Info", "Please complete all fields.");
+      return;
+    }
+
+    if (numberOnly.length !== 16) {
+      Alert.alert("Invalid Card Number", "Card number must be 16 digits.");
       return;
     }
 
     const mm = parseInt(expMonth, 10);
     const yy = parseInt(`20${expYear}`, 10);
     const now = new Date();
-    const thisMonth = now.getMonth() + 1;
-    const thisYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+    const currentYear = now.getFullYear();
 
     if (isNaN(mm) || mm < 1 || mm > 12) {
-      Alert.alert("Invalid Month", "Please enter a valid expiration month (01-12).");
+      Alert.alert("Invalid Month", "Please enter a valid expiration month.");
       return;
     }
 
-    if (isNaN(yy) || yy < thisYear || (yy === thisYear && mm < thisMonth)) {
-      Alert.alert("Card Expired", "The expiration date is in the past.");
+    if (isNaN(yy) || yy < currentYear || (yy === currentYear && mm < currentMonth)) {
+      Alert.alert("Card Expired", "Expiration date is in the past.");
+      return;
+    }
+
+    if (!/^\d{3}$/.test(cvv)) {
+      Alert.alert("Invalid CVV", "CVV must be 3 digits.");
       return;
     }
 
     setLoading(true);
 
     setTimeout(async () => {
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
+      const { data: { user }, error } = await supabase.auth.getUser();
 
-      if (userError || !user) {
+      if (error || !user) {
         Alert.alert("Login required", "Please login first.");
         setLoading(false);
         return;
       }
 
-      const { error } = await supabase.from("purchases").insert([
+      const { error: insertError } = await supabase.from("purchases").insert([
         {
           user_id: user.id,
-          resort: resort,
-          price: price,
+          resort,
+          price,
           purchase_date: new Date().toISOString(),
         },
       ]);
 
       setLoading(false);
 
-      if (error) {
-        console.error("Insert failed", error);
-        Alert.alert("Payment failed", "Please try again.");
+      if (insertError) {
+        Alert.alert("Payment failed", insertError.message);
       } else {
-        Alert.alert("Success", "Your pass was purchased successfully!", [
+        Alert.alert("Success", "Your pass was purchased!", [
           {
             text: "OK",
             onPress: () => router.replace("/(tabs)/Bookings"),
@@ -88,50 +106,57 @@ export default function Checkout() {
 
       <Text style={styles.label}>Cardholder Name</Text>
       <TextInput
-        placeholder="John Doe"
+        style={styles.input}
         value={cardName}
         onChangeText={setCardName}
-        style={styles.input}
+        placeholder="John Doe"
       />
 
       <Text style={styles.label}>Card Number</Text>
       <TextInput
-        placeholder="1234 5678 9012 3456"
-        value={cardNumber}
-        onChangeText={setCardNumber}
-        keyboardType="numeric"
         style={styles.input}
-        maxLength={16}
+        value={cardNumber}
+        onChangeText={(text) => setCardNumber(formatCardNumber(text))}
+        keyboardType="numeric"
+        placeholder="4242 4242 4242 4242"
+        maxLength={19}
       />
 
-      <Text style={styles.label}>Expiration Date(MM/YY) CVV</Text>
       <View style={styles.expiryContainer}>
-        <TextInput
-          placeholder="MM"
-          value={expMonth}
-          onChangeText={setExpMonth}
-          keyboardType="numeric"
-          maxLength={2}
-          style={[styles.input, styles.expiryInput]}
-        />
-        <Text style={styles.slash}>/</Text>
-        <TextInput
-          placeholder="YY"
-          value={expYear}
-          onChangeText={setExpYear}
-          keyboardType="numeric"
-          maxLength={2}
-          style={[styles.input, styles.expiryInput]}
-        />
-        <TextInput
-          placeholder="CVV"
-          value={cvv}
-          onChangeText={setCvv}
-          keyboardType="numeric"
-          maxLength={3}
-          secureTextEntry
-          style={[styles.input, styles.cvvInput]}
-        />
+        <View style={{ flex: 1 }}>
+          <Text style={styles.label}>Exp. Month</Text>
+          <TextInput
+            style={styles.input}
+            value={expMonth}
+            onChangeText={setExpMonth}
+            placeholder="MM"
+            keyboardType="numeric"
+            maxLength={2}
+          />
+        </View>
+        <View style={{ flex: 1, marginLeft: 10 }}>
+          <Text style={styles.label}>Exp. Year</Text>
+          <TextInput
+            style={styles.input}
+            value={expYear}
+            onChangeText={setExpYear}
+            placeholder="YY"
+            keyboardType="numeric"
+            maxLength={2}
+          />
+        </View>
+        <View style={{ flex: 1, marginLeft: 10 }}>
+          <Text style={styles.label}>CVV</Text>
+          <TextInput
+            style={styles.input}
+            value={cvv}
+            onChangeText={setCvv}
+            placeholder="123"
+            keyboardType="numeric"
+            secureTextEntry
+            maxLength={3}
+          />
+        </View>
       </View>
 
       <TouchableOpacity
@@ -157,52 +182,37 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   title: {
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: "bold",
-    marginBottom: 30,
+    marginBottom: 20,
     textAlign: "center",
-    color: "#00796B",
   },
   label: {
-    fontSize: 16,
     fontWeight: "600",
-    color: "#333",
+    color: "#00796B",
     marginBottom: 4,
+    marginTop: 12,
   },
   input: {
     backgroundColor: "white",
     borderRadius: 8,
     paddingHorizontal: 15,
     paddingVertical: 10,
-    marginBottom: 15,
     fontSize: 16,
     borderColor: "#00796B",
     borderWidth: 1,
   },
   expiryContainer: {
     flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 20,
-    gap: 5,
-  },
-  expiryInput: {
-    width: 60,
-  },
-  slash: {
-    fontSize: 20,
-    marginHorizontal: 4,
-    color: "#444",
-  },
-  cvvInput: {
-    width: 70,
-    marginLeft: 10,
+    justifyContent: "space-between",
+    marginTop: 10,
   },
   button: {
     backgroundColor: "#00796B",
-    paddingVertical: 12,
+    paddingVertical: 14,
     alignItems: "center",
     borderRadius: 8,
-    marginTop: 10,
+    marginTop: 30,
   },
   buttonText: {
     color: "white",
